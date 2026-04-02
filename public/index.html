@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Zorvyn Finance | Real-time Dashboard</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="css/style.css" />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
+        <div id="app" class="app-container">
+            <!-- Auth Section -->
+            <section id="auth-section" class="auth-section">
+                <div class="glass-card auth-card">
+                    <h1 class="gradient-text">Zorvyn Finance</h1>
+                    <p class="subtitle">Access your financial insight</p>
+
+                    <div class="tabs">
+                        <button id="tab-login" class="tab-btn active">
+                            Login
+                        </button>
+                        <button id="tab-register" class="tab-btn">
+                            Register
+                        </button>
+                    </div>
+
+                    <form id="login-form" class="auth-form">
+                        <input
+                            type="email"
+                            id="login-email"
+                            placeholder="Email Address"
+                            required
+                        />
+                        <input
+                            type="password"
+                            id="login-password"
+                            placeholder="Password"
+                            required
+                            autocomplete="current-password"
+                        />
+                        <button type="submit" class="primary-btn">
+                            Login to Dashboard
+                        </button>
+                    </form>
+
+                    <form id="register-form" class="auth-form hidden">
+                        <input
+                            type="text"
+                            id="reg-name"
+                            placeholder="Full Name"
+                            required
+                        />
+                        <input
+                            type="email"
+                            id="reg-email"
+                            placeholder="Email Address"
+                            required
+                            autocomplete="username"
+                        />
+                        <input
+                            type="password"
+                            id="reg-password"
+                            placeholder="Password (min 6 chars)"
+                            required
+                            autocomplete="new-password"
+                        />
+                        <button type="submit" class="primary-btn">
+                            Create Account
+                        </button>
+                    </form>
+
+                    <div id="auth-message" class="message"></div>
+
+                    <div class="quick-access">
+                        <p class="quick-label">Quick Access (Auto-Login)</p>
+                        <div class="quick-btns">
+                            <button class="quick-btn admin" data-role="admin">
+                                Admin
+                            </button>
+                            <button
+                                class="quick-btn analyst"
+                                data-role="analyst"
+                            >
+                                Analyst
+                            </button>
+                            <button class="quick-btn viewer" data-role="viewer">
+                                Viewer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="dashboard-section hidden">
+                <header class="dashboard-header">
+                    <div class="header-left">
+                        <h2 class="gradient-text">Financial Overview</h2>
+                        <p id="user-welcome">Welcome back, User</p>
+                    </div>
+                    <div class="header-right">
+                        <button id="logout-btn" class="secondary-btn">
+                            Logout
+                        </button>
+                    </div>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="glass-card stat-card">
+                        <h3>Total Income</h3>
+                        <p id="total-income" class="stat-value income">$0.00</p>
+                    </div>
+                    <div class="glass-card stat-card">
+                        <h3>Total Expenses</h3>
+                        <p id="total-expense" class="stat-value expense">
+                            $0.00
+                        </p>
+                    </div>
+                    <div class="glass-card stat-card">
+                        <h3>Current Balance</h3>
+                        <p id="total-balance" class="stat-value">$0.00</p>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="glass-card chart-container">
+                        <h3>Monthly Trends</h3>
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                    <div class="glass-card chart-container">
+                        <h3>Category Breakdown</h3>
+                        <canvas id="breakdownChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="records-section">
+                    <div class="records-header">
+                        <h3>Recent Transactions</h3>
+                        <button id="open-add-modal" class="primary-btn sm">
+                            + Add Record
+                        </button>
+                    </div>
+                    <div class="glass-card records-card">
+                        <table id="records-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="records-list">
+                                <!-- Records will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Record Modal -->
+            <div id="record-modal" class="modal hidden">
+                <div class="glass-card modal-content">
+                    <h3 id="modal-title">Add New Record</h3>
+                    <form id="record-form">
+                        <input type="hidden" id="edit-id" />
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="rec-type" required>
+                                <option value="INCOME">Income</option>
+                                <option value="EXPENSE">Expense</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <input
+                                type="text"
+                                id="rec-category"
+                                placeholder="e.g. Salary, Rent, Food"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Amount</label>
+                            <input
+                                type="number"
+                                id="rec-amount"
+                                step="0.01"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" id="rec-date" required />
+                        </div>
+                        <div class="form-group">
+                            <label>Notes (Optional)</label>
+                            <textarea id="rec-notes"></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button
+                                type="button"
+                                id="close-modal"
+                                class="secondary-btn"
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" class="primary-btn">
+                                Save Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script src="js/dashboard.js"></script>
+    </body>
+</html>
