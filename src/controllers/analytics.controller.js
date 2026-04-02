@@ -3,7 +3,7 @@ const { successResponse } = require("../utils/response");
 
 const getSummary = async (req, res, next) => {
     try {
-        const summary = await analyticsService.getSummary(req.user.id);
+        const summary = await analyticsService.getSummary(req.user.id, req.query);
         return successResponse(res, summary, "Summary retrieved successfully");
     } catch (err) {
         next(err);
@@ -14,6 +14,7 @@ const getCategoryBreakdown = async (req, res, next) => {
     try {
         const breakdown = await analyticsService.getCategoryBreakdown(
             req.user.id,
+            req.query,
         );
         return successResponse(
             res,
@@ -27,7 +28,7 @@ const getCategoryBreakdown = async (req, res, next) => {
 
 const getMonthlyTrends = async (req, res, next) => {
     try {
-        const trends = await analyticsService.getMonthlyTrends(req.user.id);
+        const trends = await analyticsService.getMonthlyTrends(req.user.id, req.query);
         return successResponse(
             res,
             trends,
@@ -38,8 +39,24 @@ const getMonthlyTrends = async (req, res, next) => {
     }
 };
 
+const getRecentRecords = async (req, res, next) => {
+    try {
+        const { limit } = req.query;
+        const recent = await analyticsService.getRecentRecords(req.user.id, limit);
+        return successResponse(
+            res,
+            recent,
+            "Recent records retrieved successfully",
+        );
+    } catch (err) {
+        next(err);
+    }
+};
+
+
 module.exports = {
     getSummary,
     getCategoryBreakdown,
     getMonthlyTrends,
+    getRecentRecords,
 };

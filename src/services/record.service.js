@@ -12,7 +12,7 @@ const createRecord = async (userId, data) => {
 };
 
 const getRecords = async (userId, filters = {}) => {
-    const { startDate, endDate, category, type } = filters;
+    const { startDate, endDate, category, type, search, page, limit } = filters;
 
     const where = {
         createdByUserId: userId,
@@ -28,10 +28,28 @@ const getRecords = async (userId, filters = {}) => {
     if (category) where.category = category;
     if (type) where.type = type;
 
-    return await prisma.financialRecord.findMany({
+    if (search) {
+        where.OR = [
+            { category: { contains: search, mode: "insensitive" } },
+            { notes: { contains: search, mode: "insensitive" } },
+        ];
+    }
+
+    const queryOptions = {
         where,
         orderBy: { date: "desc" },
-    });
+    };
+
+    if (page && limit) {
+        const pageNum = parseInt(page, 10);
+        const limitNum = parseInt(limit, 10);
+        if (pageNum > 0 && limitNum > 0) {
+            queryOptions.skip = (pageNum - 1) * limitNum;
+            queryOptions.take = limitNum;
+        }
+    }
+
+    return await prisma.financialRecord.findMany(queryOptions);
 };
 
 const getRecordById = async (id, userId) => {

@@ -1,10 +1,17 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-const getSummary = async (userId) => {
-    const records = await prisma.financialRecord.findMany({
-        where: { createdByUserId: userId, deletedAt: null },
-    });
+const getSummary = async (userId, filters = {}) => {
+    const { startDate, endDate } = filters;
+    const where = { createdByUserId: userId, deletedAt: null };
+    
+    if (startDate || endDate) {
+        where.date = {};
+        if (startDate) where.date.gte = new Date(startDate);
+        if (endDate) where.date.lte = new Date(endDate);
+    }
+
+    const records = await prisma.financialRecord.findMany({ where });
 
     const summary = records.reduce(
         (acc, record) => {
@@ -20,13 +27,21 @@ const getSummary = async (userId) => {
     );
 
     summary.balance = summary.totalIncome - summary.totalExpense;
+    summary.transactionCount = records.length;
     return summary;
 };
 
-const getCategoryBreakdown = async (userId) => {
-    const records = await prisma.financialRecord.findMany({
-        where: { createdByUserId: userId, deletedAt: null },
-    });
+const getCategoryBreakdown = async (userId, filters = {}) => {
+    const { startDate, endDate } = filters;
+    const where = { createdByUserId: userId, deletedAt: null };
+    
+    if (startDate || endDate) {
+        where.date = {};
+        if (startDate) where.date.gte = new Date(startDate);
+        if (endDate) where.date.lte = new Date(endDate);
+    }
+
+    const records = await prisma.financialRecord.findMany({ where });
 
     const breakdown = records.reduce((acc, record) => {
         const amount = parseFloat(record.amount);
@@ -48,16 +63,22 @@ const getCategoryBreakdown = async (userId) => {
     }));
 };
 
-const getMonthlyTrends = async (userId) => {
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+const getMonthlyTrends = async (userId, filters = {}) => {
+    const { startDate, endDate } = filters;
+    const where = { createdByUserId: userId, deletedAt: null };
+    
+    if (startDate || endDate) {
+        where.date = {};
+        if (startDate) where.date.gte = new Date(startDate);
+        if (endDate) where.date.lte = new Date(endDate);
+    } else {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        where.date = { gte: sixMonthsAgo };
+    }
 
     const records = await prisma.financialRecord.findMany({
-        where: {
-            createdByUserId: userId,
-            deletedAt: null,
-            date: { gte: sixMonthsAgo },
-        },
+        where,
         orderBy: { date: "asc" },
     });
 
@@ -83,14 +104,16 @@ const getMonthlyTrends = async (userId) => {
         const key = `${month} ${year}`;
 
         if (!acc[key]) {
-            acc[key] = { month: key, income: 0, expense: 0 };
+            acc[key] = { month: key, income: 0, expense: 0, net: 0 };
         }
 
         const amount = parseFloat(record.amount);
         if (record.type === "INCOME") {
             acc[key].income += amount;
+            acc[key].net += amount;
         } else {
             acc[key].expense += amount;
+            acc[key].net -= amount;
         }
 
         return acc;
@@ -99,8 +122,18 @@ const getMonthlyTrends = async (userId) => {
     return Object.values(trends);
 };
 
+const getRecentRecords = async (userId, limit = 5) => {
+    return await prisma.financialRecord.findMany({
+        where: { createdByUserId: userId, deletedAt: null },
+        orderBy: { date: "desc" },
+        take: parseInt(limit, 10),
+    });
+};
+
 module.exports = {
     getSummary,
     getCategoryBreakdown,
     getMonthlyTrends,
+    getRecentRecords,
 };
+

@@ -173,6 +173,26 @@ function handleLogout() {
 function showAuth() {
     document.getElementById("auth-section").classList.remove("hidden");
     document.getElementById("dashboard-section").classList.add("hidden");
+
+    // Setup authentication page tutorial
+    const authSteps = [
+        {
+            title: "Welcome to Zorvyn",
+            description:
+                "Log in or register to securely access your financial dashboard.",
+            position: "bottom",
+        },
+        {
+            title: "Quick Testing",
+            description:
+                "Use these auto-login buttons to instantly test the system as an Admin, Analyst, or Viewer.",
+            targetSelector: ".quick-access",
+            position: "top",
+        },
+    ];
+    if (typeof window.initPageTutorial === "function") {
+        window.initPageTutorial("auth-page", authSteps);
+    }
 }
 
 function showDashboard() {
@@ -189,7 +209,39 @@ function showDashboard() {
         addBtn.classList.add("hidden");
     }
 
-    refreshData();
+    refreshData().then(() => {
+        // Fire tutorial config once DOM paints (only plays if not seen)
+        const dashboardSteps = [
+            {
+                title: "Welcome",
+                description:
+                    "Welcome to your Finance Dashboard. This is your central view of all financial activity.",
+                position: "bottom",
+            },
+            {
+                title: "Summary Cards",
+                description:
+                    "These cards show your total income, expenses, and net balance at a glance.",
+                targetSelector: ".stats-grid",
+                position: "bottom",
+            },
+            { 
+               title: 'Recent Activity', 
+               description: 'Recent transactions are listed here. Click any row to see full details.', 
+               targetSelector: '.records-card', 
+               position: 'top' 
+            },
+            { 
+               title: 'Account Settings', 
+               description: 'Use the logout button to securely end your session when you are finished.', 
+               targetSelector: '.header-right', 
+               position: 'bottom' 
+            }
+        ];
+        if (typeof window.initPageTutorial === "function") {
+            window.initPageTutorial("dashboard-home", dashboardSteps);
+        }
+    });
 }
 
 async function refreshData() {
@@ -200,7 +252,7 @@ async function refreshData() {
 }
 
 async function fetchSummary() {
-    const data = await apiFetch("/api/analytics/summary");
+    const data = await apiFetch("/api/dashboard/summary");
     if (data) {
         document.getElementById("total-income").textContent = formatCurrency(
             data.totalIncome,
@@ -245,7 +297,7 @@ async function fetchRecords() {
 }
 
 async function fetchTrends() {
-    const data = await apiFetch("/api/analytics/trends");
+    const data = await apiFetch("/api/dashboard/trends");
     if (data) {
         const labels = data.map((d) => d.month);
         const incomeData = data.map((d) => d.income);
@@ -288,7 +340,7 @@ async function fetchTrends() {
 }
 
 async function fetchBreakdown() {
-    const data = await apiFetch("/api/analytics/breakdown");
+    const data = await apiFetch("/api/dashboard/by-category");
     if (data) {
         const labels = data.map((d) => d.category);
         const values = data.map((d) => d.total);

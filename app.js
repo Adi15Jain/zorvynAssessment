@@ -31,24 +31,46 @@ app.use(
 );
 app.use(cors());
 
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
+
 // Handle favicon.ico 404
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
-// Rate Limiting Middleware
+// Rate Limiting Middleware for Auth routes
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
 });
-app.use(limiter);
 
 // Body Parser Middleware
 app.use(express.json());
 
+// Setup Swagger
+const swaggerOptions = {
+    definition: {
+        openapi: "3.0.0",
+        info: {
+            title: "Finance Dashboard API",
+            version: "1.0.0",
+            description: "API documentation for the Finance Dashboard",
+        },
+        servers: [
+            {
+                url: "http://localhost:3000",
+            },
+        ],
+    },
+    apis: ["./src/routes/*.js"],
+};
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", limiter, authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/records", recordRoutes);
-app.use("/api/analytics", analyticsRoutes);
+app.use("/api/dashboard", analyticsRoutes);
 
 // Serve static files
 app.use(express.static(path.join(__dirname, "public")));

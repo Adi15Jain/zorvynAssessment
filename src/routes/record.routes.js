@@ -14,7 +14,7 @@ router.use(authenticate);
 
 router.post(
     "/",
-    requireRole("ADMIN"),
+    requireRole("ADMIN", "ANALYST"),
     validate(createRecordSchema),
     recordController.createRecord,
 );

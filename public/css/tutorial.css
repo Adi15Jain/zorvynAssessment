@@ -1,0 +1,196 @@
+/* tutorial.css - Core Tutorial System Styles */
+
+:root {
+    --tut-primary: #6366f1;
+    --tut-primary-hover: #4f46e5;
+    --tut-bg: rgba(30, 41, 59, 0.7);
+    --tut-text-main: #ffffff;
+    --tut-text-muted: rgba(255, 255, 255, 0.7);
+    --tut-overlay: rgba(0, 0, 0, 0.65);
+}
+
+/* Spotlight Element */
+.tutorial-spotlight {
+    position: fixed;
+    z-index: 9998;
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px var(--tut-overlay);
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Tutorial Card */
+.tutorial-card {
+    position: fixed;
+    z-index: 9999;
+    
+    /* Glassmorphism Configuration */
+    background: var(--tut-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    
+    width: 100%;
+    max-width: 380px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    
+    padding: 24px;
+    box-sizing: border-box;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: auto;
+    font-family: inherit;
+    color: #e2e8f0;
+    
+    /* Centered default position */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+.tutorial-card.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* When attached to target, override transform */
+.tutorial-card[data-attached="true"] {
+    transform: translateY(10px);
+}
+.tutorial-card[data-attached="true"].show {
+    transform: translateY(0);
+}
+
+/* Header Elements */
+.tutorial-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.tutorial-skip {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.tutorial-skip:hover {
+    color: #fff;
+}
+
+.tutorial-counter {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Content Elements */
+.tutorial-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--tut-text-main);
+    margin: 0 0 12px 0;
+}
+
+.tutorial-desc {
+    font-size: 14px;
+    color: var(--tut-text-muted);
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+}
+
+/* Footer / Controls */
+.tutorial-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.tutorial-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tutorial-btn-ghost {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.tutorial-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.tutorial-btn-primary {
+    background: linear-gradient(135deg, var(--tut-primary), var(--tut-primary-hover));
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+.tutorial-btn-primary:hover {
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+}
+
+/* Help Button Toggle */
+.tutorial-help-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--tut-primary);
+    color: #fff;
+    border: none;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tutorial-help-btn:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+}
+
+/* Interactive elements need to be clickable when spotlighted */
+.tutorial-target-highlighted {
+    position: relative;
+    z-index: 9999;
+}
+
+/* Mobile Responsive */
+@media (max-width: 600px) {
+    .tutorial-card {
+        top: auto !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        max-width: 100%;
+        border-radius: 20px 20px 0 0;
+        border-right: none;
+        border-left: none;
+        border-bottom: none;
+    }
+    
+    .tutorial-card:not([data-attached="true"]).show,
+    .tutorial-card[data-attached="true"].show {
+        transform: none;
+    }
+}
