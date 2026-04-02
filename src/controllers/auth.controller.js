@@ -21,7 +21,17 @@ const login = async (req, res, next) => {
     }
 };
 
+const me = async (req, res, next) => {
+    try {
+        const { passwordHash: _, ...userWithoutPassword } = req.user;
+        return successResponse(res, userWithoutPassword, "User retrieved successfully");
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     register,
     login,
+    me,
 };

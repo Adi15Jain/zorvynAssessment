@@ -19,6 +19,8 @@ router.post(
     recordController.createRecord,
 );
 router.get("/", recordController.getRecords);
+router.get("/deleted", requireRole("ADMIN"), recordController.getDeletedRecords);
+router.post("/:id/restore", requireRole("ADMIN"), recordController.restoreRecord);
 router.get("/:id", recordController.getRecordById);
 router.put(
     "/:id",

@@ -17,10 +17,25 @@ const createRecord = async (req, res, next) => {
 
 const getRecords = async (req, res, next) => {
     try {
-        const records = await recordService.getRecords(req.user.id, req.query);
+        const result = await recordService.getRecords(req.user.id, req.query);
+        const { records, total, page, limit } = result;
+        const totalPages = Math.ceil(total / limit);
+
+        const responseData = {
+            records,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+            }
+        };
+
         return successResponse(
             res,
-            records,
+            responseData,
             "Financial records retrieved successfully",
         );
     } catch (err) {
@@ -74,10 +89,53 @@ const deleteRecord = async (req, res, next) => {
     }
 };
 
+const getDeletedRecords = async (req, res, next) => {
+    try {
+        const result = await recordService.getDeletedRecords(req.user.id, req.query);
+        const { records, total, page, limit } = result;
+        const totalPages = Math.ceil(total / limit);
+
+        const responseData = {
+            records,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+            }
+        };
+
+        return successResponse(
+            res,
+            responseData,
+            "Deleted records retrieved successfully",
+        );
+    } catch (err) {
+        next(err);
+    }
+};
+
+const restoreRecord = async (req, res, next) => {
+    try {
+        const record = await recordService.restoreRecord(req.params.id);
+        return successResponse(
+            res,
+            record,
+            "Financial record restored successfully",
+        );
+    } catch (err) {
+        next(err);
+    }
+};
+
 module.exports = {
     createRecord,
     getRecords,
     getRecordById,
     updateRecord,
     deleteRecord,
+    getDeletedRecords,
+    restoreRecord,
 };

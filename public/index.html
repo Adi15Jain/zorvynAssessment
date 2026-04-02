@@ -141,26 +141,49 @@
                 <div class="records-section">
                     <div class="records-header">
                         <h3>Recent Transactions</h3>
-                        <button id="open-add-modal" class="primary-btn sm">
-                            + Add Record
-                        </button>
+                        <div class="header-controls">
+                            <div id="records-view-toggle" class="view-toggle hidden">
+                                <button id="view-active-btn" class="toggle-btn active">Active</button>
+                                <button id="view-deleted-btn" class="toggle-btn">Deleted</button>
+                            </div>
+                            <div class="search-container">
+                                <input type="text" id="search-input" placeholder="Search category or notes..." class="search-input" />
+                            </div>
+                            <button id="open-add-modal" class="primary-btn sm btn-add">
+                                + Add Record
+                            </button>
+                        </div>
                     </div>
                     <div class="glass-card records-card">
-                        <table id="records-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Category</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Notes</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="records-list">
-                                <!-- Records will be injected here -->
-                            </tbody>
-                        </table>
+                        <div class="table-container">
+                            <table id="records-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="records-list">
+                                    <!-- Records will be injected here -->
+                                </tbody>
+                            </table>
+                            <div id="no-records-message" class="hidden no-records">
+                                <p>No records found for your search.</p>
+                                <button id="clear-filters-btn" class="secondary-btn sm">Clear Filters</button>
+                            </div>
+                        </div>
+                        <div class="pagination-bar">
+                            <span id="pagination-info">Showing 0-0 of 0 records</span>
+                            <div class="pagination-buttons">
+                                <button id="prev-page" class="secondary-btn sm">Previous</button>
+                                <span id="page-numbers" class="page-numbers-container"></span>
+                                <button id="next-page" class="secondary-btn sm">Next</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

@@ -207,10 +207,73 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.view-toggle {
+    display: flex;
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 2rem;
+    padding: 0.25rem;
+}
+
+.toggle-btn {
+    padding: 0.5rem 1.25rem;
+    border-radius: 1.5rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.toggle-btn.active {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.search-input {
+    width: 250px;
+    padding: 0.6rem 1.25rem;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 2rem;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    width: 280px;
+}
+
+.btn-add {
+    white-space: nowrap;
+    border-radius: 2rem;
 }
 
 .records-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.table-container {
     overflow-x: auto;
 }
 
@@ -355,4 +418,51 @@ tr:hover {
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 2rem;
+}
+
+/* Empty State / No Records Found Fix */
+.no-records {
+    padding: 4rem 2rem;
+    text-align: center;
+    background: rgba(15, 23, 42, 0.3);
+    margin: 1rem;
+    border-radius: 1rem;
+    border: 1px dashed var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.no-records p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+/* Pagination UI */
+.pagination-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+    background: rgba(15, 23, 42, 0.3);
+    border-top: 1px solid var(--border-color);
+    border-bottom-left-radius: 1.5rem;
+    border-bottom-right-radius: 1.5rem;
+}
+
+.pagination-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.page-numbers-container {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.page-btn {
+    border-radius: 0.5rem;
+    min-width: 32px;
 }

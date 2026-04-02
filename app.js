@@ -37,11 +37,16 @@ const swaggerUi = require("swagger-ui-express");
 // Handle favicon.ico 404
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
-// Rate Limiting Middleware for Auth routes
-const limiter = rateLimit({
+const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100,
+    message: { success: false, message: "Rate limit exceeded." },
+    standardHeaders: true,
+    legacyHeaders: false,
 });
+
+// Apply to all API routes
+app.use("/api", apiLimiter);
 
 // Body Parser Middleware
 app.use(express.json());
@@ -60,6 +65,20 @@ const swaggerOptions = {
                 url: "http://localhost:3000",
             },
         ],
+        components: {
+            securitySchemes: {
+                bearerAuth: {
+                    type: "http",
+                    scheme: "bearer",
+                    bearerFormat: "JWT",
+                },
+            },
+        },
+        security: [
+            {
+                bearerAuth: [],
+            },
+        ],
     },
     apis: ["./src/routes/*.js"],
 };
@@ -67,7 +86,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
-app.use("/api/auth", limiter, authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/records", recordRoutes);
 app.use("/api/dashboard", analyticsRoutes);

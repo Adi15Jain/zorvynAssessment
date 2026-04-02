@@ -2,14 +2,34 @@ let token = localStorage.getItem("zorvyn_token");
 let user = JSON.parse(localStorage.getItem("zorvyn_user"));
 let trendsChart, breakdownChart;
 
+let currentPage = 1;
+const recsLimit = 20;
+let searchQuery = "";
+let searchTimeout;
+let isViewingDeleted = false;
+
 // --- Initialize App ---
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    setupEventListeners();
     if (token) {
-        showDashboard();
+        const res = await fetch("/api/auth/me", {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.status === 401) {
+            handleLogout("Session expired, please log in again");
+        } else {
+            const data = await res.json();
+            if (data.success) {
+                user = data.data; // refresh user data
+                localStorage.setItem("zorvyn_user", JSON.stringify(user));
+                showDashboard();
+            } else {
+                handleLogout("Session expired, please log in again");
+            }
+        }
     } else {
         showAuth();
     }
-    setupEventListeners();
 });
 
 function setupEventListeners() {
@@ -48,7 +68,26 @@ function setupEventListeners() {
         btn.addEventListener("click", () => handleQuickLogin(btn.dataset.role));
     });
 
-    // Event Delegation for Table Actions (Edit/Delete)
+    // Search and Pagination
+    document.getElementById("search-input")?.addEventListener("input", handleSearch);
+    document.getElementById("clear-filters-btn")?.addEventListener("click", () => {
+        document.getElementById("search-input").value = "";
+        searchQuery = "";
+        currentPage = 1;
+        fetchRecords();
+    });
+    document.getElementById("prev-page")?.addEventListener("click", () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchRecords();
+        }
+    });
+    document.getElementById("next-page")?.addEventListener("click", () => {
+        currentPage++;
+        fetchRecords();
+    });
+
+    // Event Delegation for Table Actions (Edit/Delete/Restore)
     document.getElementById("records-list").addEventListener("click", (e) => {
         // Only allow if admin (though buttons are hidden for others)
         if (user.role !== "ADMIN") return;
@@ -60,7 +99,26 @@ function setupEventListeners() {
         } else if (target.classList.contains("btn-delete")) {
             const id = target.getAttribute("data-id");
             deleteRecord(id);
+        } else if (target.classList.contains("btn-restore")) {
+            const id = target.getAttribute("data-id");
+            restoreRecord(id);
         }
+    });
+    
+    // View Deleted Toggle
+    document.getElementById("view-active-btn")?.addEventListener("click", () => {
+        isViewingDeleted = false;
+        document.getElementById("view-active-btn").classList.add("active");
+        document.getElementById("view-deleted-btn").classList.remove("active");
+        currentPage = 1;
+        fetchRecords();
+    });
+    document.getElementById("view-deleted-btn")?.addEventListener("click", () => {
+        isViewingDeleted = true;
+        document.getElementById("view-deleted-btn").classList.add("active");
+        document.getElementById("view-active-btn").classList.remove("active");
+        currentPage = 1;
+        fetchRecords();
     });
 }
 
@@ -117,6 +175,12 @@ async function handleLogin(e) {
             body: JSON.stringify({ email, password }),
         });
 
+        if (res.status === 429) {
+            showToast("Too many requests. Please slow down.");
+            startLoginCooldown();
+            return;
+        }
+
         const data = await res.json();
         if (data.success) {
             token = data.data.token;
@@ -147,6 +211,12 @@ async function handleRegister(e) {
             body: JSON.stringify({ name, email, password }),
         });
 
+        if (res.status === 429) {
+            showToast("Too many requests. Please slow down.");
+            startLoginCooldown();
+            return;
+        }
+
         const data = await res.json();
         if (data.success) {
             messageEl.textContent = "Account created! Please login.";
@@ -161,12 +231,23 @@ async function handleRegister(e) {
     }
 }
 
-function handleLogout() {
+function handleLogout(eOrMessage) {
+    let message = typeof eOrMessage === 'string' ? eOrMessage : null;
+    if (eOrMessage && typeof eOrMessage === 'object' && eOrMessage.preventDefault) {
+        eOrMessage.preventDefault();
+    }
     token = null;
     user = null;
     localStorage.removeItem("zorvyn_token");
     localStorage.removeItem("zorvyn_user");
     showAuth();
+    if (message) {
+        const messageEl = document.getElementById("auth-message");
+        if (messageEl) {
+            messageEl.textContent = message;
+            messageEl.style.color = "var(--expense-color)";
+        }
+    }
 }
 
 // --- Dashboard Functions ---
@@ -203,10 +284,13 @@ function showDashboard() {
 
     // UI Role Checks
     const addBtn = document.getElementById("open-add-modal");
+    const viewToggle = document.getElementById("records-view-toggle");
     if (user.role === "ADMIN") {
         addBtn.classList.remove("hidden");
+        if (viewToggle) viewToggle.classList.remove("hidden");
     } else {
         addBtn.classList.add("hidden");
+        if (viewToggle) viewToggle.classList.add("hidden");
     }
 
     refreshData().then(() => {
@@ -266,34 +350,120 @@ async function fetchSummary() {
     }
 }
 
+function handleSearch(e) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        searchQuery = e.target.value;
+        currentPage = 1; // reset to first page
+        fetchRecords();
+    }, 400);
+}
+
 async function fetchRecords() {
-    const data = await apiFetch("/api/records");
+    let endpoint = isViewingDeleted ? "/api/records/deleted" : "/api/records";
+    let url = `${endpoint}?page=${currentPage}&limit=${recsLimit}`;
+    if (searchQuery) {
+        url += `&search=${encodeURIComponent(searchQuery)}`;
+    }
+    const data = await apiFetch(url);
     if (data) {
+        const { records, pagination } = data;
         const list = document.getElementById("records-list");
-        list.innerHTML = data
-            .map(
-                (record) => `
+        const noRecs = document.getElementById("no-records-message");
+        const table = document.getElementById("records-table");
+
+        if (records.length === 0) {
+            table.classList.add("hidden");
+            noRecs.classList.remove("hidden");
+            document.getElementById("pagination-info").textContent = "Showing 0 records";
+            const pageNumContainer = document.getElementById("page-numbers");
+            if(pageNumContainer) pageNumContainer.innerHTML = "";
+            return;
+        } else {
+            table.classList.remove("hidden");
+            noRecs.classList.add("hidden");
+        }
+
+        list.innerHTML = records
+            .map((record) => {
+                let displayCat = record.category;
+                let displayNotes = record.notes || "-";
+                if (searchQuery) {
+                    const regex = new RegExp(`(${searchQuery})`, "gi");
+                    displayCat = displayCat.replace(regex, "<mark>$1</mark>");
+                    if (record.notes) {
+                        displayNotes = displayNotes.replace(regex, "<mark>$1</mark>");
+                    }
+                }
+                
+                let actionsHTML = '<span class="text-secondary">-</span>';
+                if (user.role === "ADMIN") {
+                    if (isViewingDeleted) {
+                        actionsHTML = `<button class="btn-action btn-restore" data-id="${record.id}">↺ Restore</button>`;
+                    } else {
+                        actionsHTML = `
+                            <button class="btn-action btn-edit" data-id="${record.id}">✎</button>
+                            <button class="btn-action btn-delete" data-id="${record.id}">🗑</button>
+                        `;
+                    }
+                }
+                
+                return `
             <tr>
                 <td>${new Date(record.date).toLocaleDateString()}</td>
-                <td>${record.category}</td>
+                <td>${displayCat}</td>
                 <td><span class="badge ${record.type.toLowerCase()}">${record.type}</span></td>
                 <td class="${record.type === "INCOME" ? "income" : "expense"}">${formatCurrency(record.amount)}</td>
-                <td>${record.notes || "-"}</td>
-                <td>
-                    ${
-                        user.role === "ADMIN"
-                            ? `
-                        <button class="btn-action btn-edit" data-id="${record.id}">✎</button>
-                        <button class="btn-action btn-delete" data-id="${record.id}">🗑</button>
-                    `
-                            : '<span class="text-secondary">-</span>'
-                    }
-                </td>
+                <td>${displayNotes}</td>
+                <td>${actionsHTML}</td>
             </tr>
-        `,
-            )
+        `})
             .join("");
+
+        renderPagination(pagination);
     }
+}
+
+function renderPagination(pagination) {
+    if (!pagination) return;
+    const { total, page, limit, totalPages, hasNextPage, hasPrevPage } = pagination;
+    const startRange = total === 0 ? 0 : (page - 1) * limit + 1;
+    const endRange = Math.min(page * limit, total);
+    
+    document.getElementById("pagination-info").textContent = `Showing ${startRange}–${endRange} of ${total} records`;
+    
+    const prevBtn = document.getElementById("prev-page");
+    const nextBtn = document.getElementById("next-page");
+    prevBtn.disabled = !hasPrevPage;
+    nextBtn.disabled = !hasNextPage;
+    // Visually show disable state if not already handled by CSS
+    prevBtn.style.opacity = hasPrevPage ? "1" : "0.5";
+    nextBtn.style.opacity = hasNextPage ? "1" : "0.5";
+    
+    const pageNumContainer = document.getElementById("page-numbers");
+    pageNumContainer.innerHTML = "";
+    
+    let startPage = Math.max(1, page - 2);
+    let endPage = Math.min(totalPages, page + 2);
+    
+    if (page <= 2) endPage = Math.min(5, totalPages);
+    if (page >= totalPages - 1) startPage = Math.max(1, totalPages - 4);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement("button");
+        btn.className = `secondary-btn sm page-btn`;
+        if (i === page) {
+            btn.style.backgroundColor = "rgba(255, 255, 255, 0.1)"; // Active state
+        }
+        btn.textContent = i;
+        btn.addEventListener("click", () => {
+            currentPage = i;
+            fetchRecords();
+        });
+        pageNumContainer.appendChild(btn);
+    }
+    
+    currentPage = page;
 }
 
 async function fetchTrends() {
@@ -440,10 +610,66 @@ async function editRecord(id) {
 }
 
 async function deleteRecord(id) {
-    if (confirm("Are you sure you want to delete this record?")) {
+    if (confirm("This record will be soft deleted and can be restored by an admin.")) {
         const data = await apiFetch(`/api/records/${id}`, { method: "DELETE" });
         if (data) refreshData();
     }
+}
+
+async function restoreRecord(id) {
+    const data = await apiFetch(`/api/records/${id}/restore`, { method: "POST" });
+    if (data) refreshData();
+}
+
+function showToast(message) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.position = "fixed";
+    toast.style.bottom = "20px";
+    toast.style.right = "20px";
+    toast.style.backgroundColor = "#ef4444";
+    toast.style.color = "white";
+    toast.style.padding = "10px 20px";
+    toast.style.borderRadius = "8px";
+    toast.style.zIndex = "9999";
+    toast.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+    toast.style.transition = "opacity 0.3s ease";
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function startLoginCooldown() {
+    const loginBtn = document.querySelector("#login-form button[type='submit']");
+    const regBtn = document.querySelector("#register-form button[type='submit']");
+    
+    if (loginBtn.disabled) return; // already in cooldown
+    
+    const originalLoginText = loginBtn.textContent;
+    const originalRegText = regBtn.textContent;
+    
+    loginBtn.disabled = true;
+    regBtn.disabled = true;
+    
+    let secondsLeft = 60;
+    loginBtn.textContent = `Try again in ${secondsLeft}s...`;
+    regBtn.textContent = `Try again in ${secondsLeft}s...`;
+    
+    const interval = setInterval(() => {
+        secondsLeft--;
+        if (secondsLeft <= 0) {
+            clearInterval(interval);
+            loginBtn.disabled = false;
+            regBtn.disabled = false;
+            loginBtn.textContent = originalLoginText;
+            regBtn.textContent = originalRegText;
+        } else {
+            loginBtn.textContent = `Try again in ${secondsLeft}s...`;
+            regBtn.textContent = `Try again in ${secondsLeft}s...`;
+        }
+    }, 1000);
 }
 
 // --- Helper Functions ---
@@ -457,10 +683,15 @@ async function apiFetch(url, options = {}) {
 
     try {
         const res = await fetch(url, options);
+        if (res.status === 429) {
+            showToast("Too many requests. Please slow down.");
+            return null;
+        }
+
         const data = await res.json();
 
         if (res.status === 401) {
-            handleLogout();
+            handleLogout("Session expired, please log in again");
             return null;
         }
 

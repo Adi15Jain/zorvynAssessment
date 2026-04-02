@@ -28,10 +28,10 @@ const getRecords = async (userId, filters = {}) => {
     if (category) where.category = category;
     if (type) where.type = type;
 
-    if (search) {
+    if (search && typeof search === 'string' && search.trim() !== "") {
         where.OR = [
-            { category: { contains: search, mode: "insensitive" } },
-            { notes: { contains: search, mode: "insensitive" } },
+            { category: { contains: search.trim(), mode: "insensitive" } },
+            { notes: { contains: search.trim(), mode: "insensitive" } },
         ];
     }
 
@@ -40,16 +40,29 @@ const getRecords = async (userId, filters = {}) => {
         orderBy: { date: "desc" },
     };
 
-    if (page && limit) {
-        const pageNum = parseInt(page, 10);
-        const limitNum = parseInt(limit, 10);
-        if (pageNum > 0 && limitNum > 0) {
-            queryOptions.skip = (pageNum - 1) * limitNum;
-            queryOptions.take = limitNum;
-        }
+    const limitNum = parseInt(limit || "20", 10);
+    const pageNum = parseInt(page || "1", 10);
+    
+    if (isNaN(pageNum) || pageNum < 1 || isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+        const error = new Error("Invalid pagination parameters");
+        error.statusCode = 400;
+        throw error;
     }
 
-    return await prisma.financialRecord.findMany(queryOptions);
+    queryOptions.skip = (pageNum - 1) * limitNum;
+    queryOptions.take = limitNum;
+
+    const [total, records] = await Promise.all([
+        prisma.financialRecord.count({ where: queryOptions.where }),
+        prisma.financialRecord.findMany(queryOptions)
+    ]);
+
+    return {
+        records,
+        total,
+        page: pageNum,
+        limit: limitNum,
+    };
 };
 
 const getRecordById = async (id, userId) => {
@@ -89,10 +102,55 @@ const deleteRecord = async (id, userId) => {
     });
 };
 
+const getDeletedRecords = async (userId, filters = {}) => {
+    // Only difference is deletedAt is NOT null
+    const { page, limit } = filters;
+    const where = {
+        deletedAt: { not: null },
+    };
+    const queryOptions = {
+        where,
+        orderBy: { deletedAt: "desc" },
+    };
+
+    const limitNum = parseInt(limit || "20", 10);
+    const pageNum = parseInt(page || "1", 10);
+    
+    if (isNaN(pageNum) || pageNum < 1 || isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+        const error = new Error("Invalid pagination parameters");
+        error.statusCode = 400;
+        throw error;
+    }
+
+    queryOptions.skip = (pageNum - 1) * limitNum;
+    queryOptions.take = limitNum;
+
+    const [total, records] = await Promise.all([
+        prisma.financialRecord.count({ where: queryOptions.where }),
+        prisma.financialRecord.findMany(queryOptions)
+    ]);
+
+    return {
+        records,
+        total,
+        page: pageNum,
+        limit: limitNum,
+    };
+};
+
+const restoreRecord = async (id) => {
+    return await prisma.financialRecord.update({
+        where: { id },
+        data: { deletedAt: null },
+    });
+};
+
 module.exports = {
     createRecord,
     getRecords,
     getRecordById,
     updateRecord,
     deleteRecord,
+    getDeletedRecords,
+    restoreRecord,
 };
