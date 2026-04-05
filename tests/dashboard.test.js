@@ -24,8 +24,12 @@ describe("Dashboard Analytics Routes", () => {
     });
 
     afterAll(async () => {
-        await prisma.financialRecord.deleteMany({ where: { createdByUserId: userId } });
-        await prisma.user.delete({ where: { id: userId } });
+        const emails = ["dashboard_tester@example.com"];
+        await prisma.financialRecord.deleteMany({ 
+            where: { createdByUser: { email: { in: emails } } } 
+        });
+        await prisma.user.deleteMany({ where: { email: { in: emails } } });
+        await prisma.$disconnect();
     });
 
     test("GET /api/dashboard/summary", async () => {

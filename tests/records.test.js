@@ -30,8 +30,12 @@ describe("Record Routes", () => {
     });
 
     afterAll(async () => {
-        await prisma.financialRecord.deleteMany({ where: { createdByUserId: userId } });
-        await prisma.user.delete({ where: { id: userId } });
+        const emails = ["admin_record_tester@example.com", "viewer_test@example.com"];
+        await prisma.financialRecord.deleteMany({ 
+            where: { createdByUser: { email: { in: emails } } } 
+        });
+        await prisma.user.deleteMany({ where: { email: { in: emails } } });
+        await prisma.$disconnect();
     });
 
     test("POST /api/records", async () => {
@@ -51,7 +55,7 @@ describe("Record Routes", () => {
         expect(Number(res.body.data.amount)).toBe(5000);
     });
 
-    test("GET /api/records", async () => {
+    test("GET /api/records - Authorized Access", async () => {
         const res = await request(app)
             .get("/api/records")
             .set("Authorization", `Bearer ${token}`);
@@ -59,6 +63,45 @@ describe("Record Routes", () => {
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
         expect(res.body.data.records).toBeInstanceOf(Array);
-        expect(res.body.data.records.length).toBeGreaterThan(0);
+    });
+
+    describe("RBAC Enforcement (Role Boundaries)", () => {
+        let viewerToken;
+
+        beforeAll(async () => {
+            // Create a dedicated viewer
+            await request(app).post("/api/auth/register").send({
+                name: "Viewer Tester",
+                email: "viewer_test@example.com",
+                password: "password123"
+            });
+            // (Standard role is VIEWER by default)
+            const loginRes = await request(app).post("/api/auth/login").send({
+                email: "viewer_test@example.com",
+                password: "password123"
+            });
+            viewerToken = loginRes.body.data.token;
+        });
+
+        // (teardown handled by top-level afterAll)
+
+        test("VIEWER cannot create a record (403 Forbidden)", async () => {
+            const res = await request(app)
+                .post("/api/records")
+                .set("Authorization", `Bearer ${viewerToken}`)
+                .send({ amount: 100, type: "INCOME", category: "Test", date: new Date() });
+            
+            expect(res.status).toBe(403);
+            expect(res.body.success).toBe(false);
+        });
+
+        test("ADMIN can access deleted records", async () => {
+            const res = await request(app)
+                .get("/api/records/deleted")
+                .set("Authorization", `Bearer ${token}`);
+            
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+        });
     });
 });

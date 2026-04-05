@@ -5,7 +5,7 @@ const {
     createRecordSchema,
     updateRecordSchema,
 } = require("../validators/record.validator");
-const { validate } = require("../validators/auth.validator");
+const validate = require("../middleware/validate.middleware");
 
 const router = express.Router();
 
@@ -24,10 +24,10 @@ router.post("/:id/restore", requireRole("ADMIN"), recordController.restoreRecord
 router.get("/:id", recordController.getRecordById);
 router.put(
     "/:id",
-    requireRole("ADMIN"),
+    requireRole("ADMIN", "ANALYST"),
     validate(updateRecordSchema),
     recordController.updateRecord,
 );
-router.delete("/:id", requireRole("ADMIN"), recordController.deleteRecord);
+router.delete("/:id", requireRole("ADMIN", "ANALYST"), recordController.deleteRecord);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 const { generateToken } = require("../utils/jwt");
+const AppError = require("../utils/AppError");
 
 const prisma = new PrismaClient();
 
@@ -10,9 +11,7 @@ const registerUser = async ({ name, email, password }) => {
     });
 
     if (existingUser) {
-        const error = new Error("User with this email already exists.");
-        error.statusCode = 409;
-        throw error;
+        throw new AppError("User with this email already exists.", 409);
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -45,23 +44,18 @@ const loginUser = async ({ email, password }) => {
     });
 
     if (!user) {
-        const error = new Error("Invalid email or password.");
-        error.statusCode = 401;
-        throw error;
+        // Shared error message for security (don't leak if email exists)
+        throw new AppError("Invalid email or password.", 401);
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordValid) {
-        const error = new Error("Invalid email or password.");
-        error.statusCode = 401;
-        throw error;
+        throw new AppError("Invalid email or password.", 401);
     }
 
     if (user.status !== "ACTIVE") {
-        const error = new Error("Your account is currently inactive.");
-        error.statusCode = 403;
-        throw error;
+        throw new AppError("Your account is currently inactive.", 403);
     }
 
     const token = generateToken({ userId: user.id, role: user.role });

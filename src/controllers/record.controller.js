@@ -1,134 +1,110 @@
 const recordService = require("../services/record.service");
-const { successResponse, errorResponse } = require("../utils/response");
+const { successResponse } = require("../utils/response");
+const asyncHandler = require("../utils/asyncHandler");
 
-const createRecord = async (req, res, next) => {
-    try {
-        const record = await recordService.createRecord(req.user.id, req.body);
-        return successResponse(
-            res,
-            record,
-            "Financial record created successfully",
-            201,
-        );
-    } catch (err) {
-        next(err);
-    }
-};
+const createRecord = asyncHandler(async (req, res, next) => {
+    const record = await recordService.createRecord(req.user.id, req.body);
+    return successResponse(
+        res,
+        record,
+        "Financial record created successfully",
+        201,
+    );
+});
 
-const getRecords = async (req, res, next) => {
-    try {
-        const result = await recordService.getRecords(req.user.id, req.query);
-        const { records, total, page, limit } = result;
-        const totalPages = Math.ceil(total / limit);
+const getRecords = asyncHandler(async (req, res, next) => {
+    const result = await recordService.getRecords(req.user.id, req.query);
+    const { records, total, page, limit } = result;
+    const totalPages = Math.ceil(total / limit);
 
-        const responseData = {
-            records,
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages,
-                hasNextPage: page < totalPages,
-                hasPrevPage: page > 1,
-            }
-        };
+    const responseData = {
+        records,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+        },
+    };
 
-        return successResponse(
-            res,
-            responseData,
-            "Financial records retrieved successfully",
-        );
-    } catch (err) {
-        next(err);
-    }
-};
+    return successResponse(
+        res,
+        responseData,
+        "Financial records retrieved successfully",
+    );
+});
 
-const getRecordById = async (req, res, next) => {
-    try {
-        const record = await recordService.getRecordById(
-            req.params.id,
-            req.user.id,
-        );
-        return successResponse(
-            res,
-            record,
-            "Financial record retrieved successfully",
-        );
-    } catch (err) {
-        next(err);
-    }
-};
+const getRecordById = asyncHandler(async (req, res, next) => {
+    const record = await recordService.getRecordById(
+        req.params.id,
+        req.user.id,
+    );
+    return successResponse(
+        res,
+        record,
+        "Financial record retrieved successfully",
+    );
+});
 
-const updateRecord = async (req, res, next) => {
-    try {
-        const record = await recordService.updateRecord(
-            req.params.id,
-            req.user.id,
-            req.body,
-        );
-        return successResponse(
-            res,
-            record,
-            "Financial record updated successfully",
-        );
-    } catch (err) {
-        next(err);
-    }
-};
+const updateRecord = asyncHandler(async (req, res, next) => {
+    const record = await recordService.updateRecord(
+        req.params.id,
+        req.user.id,
+        req.body,
+    );
+    return successResponse(
+        res,
+        record,
+        "Financial record updated successfully",
+    );
+});
 
-const deleteRecord = async (req, res, next) => {
-    try {
-        await recordService.deleteRecord(req.params.id, req.user.id);
-        return successResponse(
-            res,
-            null,
-            "Financial record deleted successfully",
-        );
-    } catch (err) {
-        next(err);
-    }
-};
+const deleteRecord = asyncHandler(async (req, res, next) => {
+    await recordService.deleteRecord(req.params.id, req.user.id);
+    return successResponse(
+        res,
+        null,
+        "Financial record deleted successfully",
+    );
+});
 
-const getDeletedRecords = async (req, res, next) => {
-    try {
-        const result = await recordService.getDeletedRecords(req.user.id, req.query);
-        const { records, total, page, limit } = result;
-        const totalPages = Math.ceil(total / limit);
+const getDeletedRecords = asyncHandler(async (req, res, next) => {
+    const result = await recordService.getDeletedRecords(
+        req.user.id,
+        req.query,
+    );
+    const { records, total, page, limit } = result;
+    const totalPages = Math.ceil(total / limit);
 
-        const responseData = {
-            records,
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages,
-                hasNextPage: page < totalPages,
-                hasPrevPage: page > 1,
-            }
-        };
+    const responseData = {
+        records,
+        pagination: {
+            total,
+            page,
+            limit,
+            totalPages,
+            hasNextPage: page < totalPages,
+            hasPrevPage: page > 1,
+        },
+    };
 
-        return successResponse(
-            res,
-            responseData,
-            "Deleted records retrieved successfully",
-        );
-    } catch (err) {
-        next(err);
-    }
-};
+    return successResponse(
+        res,
+        responseData,
+        "Deleted records retrieved successfully",
+    );
+});
 
-const restoreRecord = async (req, res, next) => {
-    try {
-        const record = await recordService.restoreRecord(req.params.id);
-        return successResponse(
-            res,
-            record,
-            "Financial record restored successfully",
-        );
-    } catch (err) {
-        next(err);
-    }
-};
+const restoreRecord = asyncHandler(async (req, res, next) => {
+    const record = await recordService.restoreRecord(req.params.id);
+    return successResponse(
+        res,
+        record,
+        "Financial record restored successfully",
+    );
+});
 
 module.exports = {
     createRecord,

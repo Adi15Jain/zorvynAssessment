@@ -83,18 +83,8 @@ const getMonthlyTrends = async (userId, filters = {}) => {
     });
 
     const months = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
 
     const trends = records.reduce((acc, record) => {
@@ -136,4 +126,3 @@ module.exports = {
     getMonthlyTrends,
     getRecentRecords,
 };
-

@@ -63,8 +63,8 @@ function setupEventListeners() {
         .getElementById("record-form")
         .addEventListener("submit", handleRecordSubmit);
 
-    // Quick Login Buttons
-    document.querySelectorAll(".quick-btn").forEach((btn) => {
+    // Quick Login Buttons (Portal Cards)
+    document.querySelectorAll(".portal-btn").forEach((btn) => {
         btn.addEventListener("click", () => handleQuickLogin(btn.dataset.role));
     });
 
@@ -89,8 +89,8 @@ function setupEventListeners() {
 
     // Event Delegation for Table Actions (Edit/Delete/Restore)
     document.getElementById("records-list").addEventListener("click", (e) => {
-        // Only allow if admin (though buttons are hidden for others)
-        if (user.role !== "ADMIN") return;
+        // Only allow if admin or analyst (though buttons are hidden for others)
+        if (user.role !== "ADMIN" && user.role !== "ANALYST") return;
 
         const target = e.target;
         if (target.classList.contains("btn-edit")) {
@@ -168,6 +168,7 @@ async function handleLogin(e) {
     const password = document.getElementById("login-password").value;
     const messageEl = document.getElementById("auth-message");
 
+    setLoading(true, "Authenticating...");
     try {
         const res = await fetch("/api/auth/login", {
             method: "POST",
@@ -194,6 +195,8 @@ async function handleLogin(e) {
         }
     } catch (err) {
         console.error(err);
+    } finally {
+        setLoading(false);
     }
 }
 
@@ -204,6 +207,7 @@ async function handleRegister(e) {
     const password = document.getElementById("reg-password").value;
     const messageEl = document.getElementById("auth-message");
 
+    setLoading(true, "Creating Account...");
     try {
         const res = await fetch("/api/auth/register", {
             method: "POST",
@@ -228,6 +232,8 @@ async function handleRegister(e) {
         }
     } catch (err) {
         console.error(err);
+    } finally {
+        setLoading(false);
     }
 }
 
@@ -240,6 +246,7 @@ function handleLogout(eOrMessage) {
     user = null;
     localStorage.removeItem("zorvyn_token");
     localStorage.removeItem("zorvyn_user");
+    document.documentElement.removeAttribute("data-role");
     showAuth();
     if (message) {
         const messageEl = document.getElementById("auth-message");
@@ -279,17 +286,26 @@ function showAuth() {
 function showDashboard() {
     document.getElementById("auth-section").classList.add("hidden");
     document.getElementById("dashboard-section").classList.remove("hidden");
+    
+    // Set Persona Theme
+    document.documentElement.setAttribute("data-role", user.role.toLowerCase());
+
+    const roleName = user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
     document.getElementById("user-welcome").textContent =
-        `Welcome back, ${user.name} (${user.role})`;
+        `Welcome back, ${user.name} (${roleName})`;
 
     // UI Role Checks
     const addBtn = document.getElementById("open-add-modal");
     const viewToggle = document.getElementById("records-view-toggle");
-    if (user.role === "ADMIN") {
+    if (user.role === "ADMIN" || user.role === "ANALYST") {
         addBtn.classList.remove("hidden");
-        if (viewToggle) viewToggle.classList.remove("hidden");
     } else {
         addBtn.classList.add("hidden");
+    }
+    
+    if (user.role === "ADMIN") {
+        if (viewToggle) viewToggle.classList.remove("hidden");
+    } else {
         if (viewToggle) viewToggle.classList.add("hidden");
     }
 
@@ -329,10 +345,13 @@ function showDashboard() {
 }
 
 async function refreshData() {
-    await fetchSummary();
-    await fetchTrends();
-    await fetchBreakdown();
-    await fetchRecords();
+    // Parallelize all dashboard fetches for real-time speed feel
+    await Promise.all([
+        fetchSummary(),
+        fetchTrends(),
+        fetchBreakdown(),
+        fetchRecords()
+    ]);
 }
 
 async function fetchSummary() {
@@ -397,10 +416,10 @@ async function fetchRecords() {
                 }
                 
                 let actionsHTML = '<span class="text-secondary">-</span>';
-                if (user.role === "ADMIN") {
-                    if (isViewingDeleted) {
+                if (user.role === "ADMIN" || user.role === "ANALYST") {
+                    if (isViewingDeleted && user.role === "ADMIN") {
                         actionsHTML = `<button class="btn-action btn-restore" data-id="${record.id}">↺ Restore</button>`;
-                    } else {
+                    } else if (!isViewingDeleted) {
                         actionsHTML = `
                             <button class="btn-action btn-edit" data-id="${record.id}">✎</button>
                             <button class="btn-action btn-delete" data-id="${record.id}">🗑</button>
@@ -610,9 +629,32 @@ async function editRecord(id) {
 }
 
 async function deleteRecord(id) {
-    if (confirm("This record will be soft deleted and can be restored by an admin.")) {
+    // Optimistic UI: Find the row and fade it out immediately
+    const row = document.querySelector(`.btn-delete[data-id="${id}"]`)?.closest('tr');
+    
+    if (row) {
+        row.style.pointerEvents = 'none';
+        row.classList.add('row-fade-out');
+    }
+
+    try {
         const data = await apiFetch(`/api/records/${id}`, { method: "DELETE" });
-        if (data) refreshData();
+        if (data) {
+            // Trigger parallel refresh in background
+            refreshData(); 
+        } else {
+            // If failed (null returned from apiFetch), revert UI
+            if (row) {
+                row.classList.remove('row-fade-out');
+                row.style.pointerEvents = 'auto';
+            }
+        }
+    } catch (err) {
+        console.error("Delete failed:", err);
+        if (row) {
+            row.classList.remove('row-fade-out');
+            row.style.pointerEvents = 'auto';
+        }
     }
 }
 
@@ -681,27 +723,43 @@ async function apiFetch(url, options = {}) {
         Authorization: `Bearer ${token}`,
     };
 
+    setLoading(true);
     try {
-        const res = await fetch(url, options);
         if (res.status === 429) {
             showToast("Too many requests. Please slow down.");
             return null;
         }
 
         const data = await res.json();
-
         if (res.status === 401) {
             handleLogout("Session expired, please log in again");
             return null;
         }
 
-        if (data.success) return data.data;
+        if (data.success) {
+            // Return data if present, otherwise return true to signal success
+            return data.data !== null && data.data !== undefined ? data.data : true;
+        }
 
         alert(data.message || "Operation failed");
         return null;
     } catch (err) {
         console.error(err);
         return null;
+    } finally {
+        setLoading(false);
+    }
+}
+
+function setLoading(show, text = "Processing...") {
+    const loader = document.getElementById("global-loader");
+    const loaderText = loader.querySelector(".loading-text");
+    if (loaderText) loaderText.textContent = text;
+    
+    if (show) {
+        loader.classList.add("active");
+    } else {
+        loader.classList.remove("active");
     }
 }
 

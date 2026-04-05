@@ -10,6 +10,8 @@
         />
         <link rel="stylesheet" href="/css/style.css" />
         <link rel="stylesheet" href="/css/tutorial.css" />
+        <!-- Font-awesome for icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
@@ -77,20 +79,23 @@
                     <div id="auth-message" class="message"></div>
 
                     <div class="quick-access">
-                        <p class="quick-label">Quick Access (Auto-Login)</p>
+                        <p class="quick-label">Select Your Portal</p>
                         <div class="quick-btns">
-                            <button class="quick-btn admin" data-role="admin">
-                                Admin
-                            </button>
-                            <button
-                                class="quick-btn analyst"
-                                data-role="analyst"
-                            >
-                                Analyst
-                            </button>
-                            <button class="quick-btn viewer" data-role="viewer">
-                                Viewer
-                            </button>
+                            <div class="portal-btn admin" data-role="admin">
+                                <i class="fas fa-user-shield"></i>
+                                <span class="portal-label">Admin</span>
+                                <span class="portal-desc">Full Authority</span>
+                            </div>
+                            <div class="portal-btn analyst" data-role="analyst">
+                                <i class="fas fa-chart-line"></i>
+                                <span class="portal-label">Analyst</span>
+                                <span class="portal-desc">Data Insights</span>
+                            </div>
+                            <div class="portal-btn viewer" data-role="viewer">
+                                <i class="fas fa-eye"></i>
+                                <span class="portal-label">Viewer</span>
+                                <span class="portal-desc">ReadOnly Area</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,6 +247,10 @@
                     </form>
                 </div>
             </div>
+        </div>
+        <div id="global-loader" class="loader-overlay">
+            <div class="spiral-spinner"></div>
+            <p class="loading-text">Processing...</p>
         </div>
         <script src="/js/tutorial.js"></script>
         <script src="js/dashboard.js"></script>
