@@ -2,24 +2,28 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const AppError = require("../utils/AppError");
 
-const createRecord = async (userId, data) => {
+const createRecord = async (user, data) => {
     return await prisma.financialRecord.create({
         data: {
             ...data,
             amount: parseFloat(data.amount),
             date: new Date(data.date),
-            createdByUserId: userId,
+            createdByUserId: user.id,
         },
     });
 };
 
-const getRecords = async (userId, filters = {}) => {
+const getRecords = async (user, filters = {}) => {
     const { startDate, endDate, category, type, search, page, limit } = filters;
 
     const where = {
-        createdByUserId: userId,
         deletedAt: null,
     };
+
+    // RBAC: Non-admin/analyst users only see their own records
+    if (user.role !== "ADMIN" && user.role !== "ANALYST") {
+        where.createdByUserId = user.id;
+    }
 
     if (startDate || endDate) {
         where.date = {};
@@ -62,9 +66,16 @@ const getRecords = async (userId, filters = {}) => {
     };
 };
 
-const getRecordById = async (id, userId) => {
+const getRecordById = async (id, user) => {
+    const where = { id, deletedAt: null };
+    
+    // RBAC: Non-admin/analyst users only see their own records
+    if (user.role !== "ADMIN" && user.role !== "ANALYST") {
+        where.createdByUserId = user.id;
+    }
+
     const record = await prisma.financialRecord.findFirst({
-        where: { id, createdByUserId: userId, deletedAt: null },
+        where,
     });
 
     if (!record) {
@@ -74,9 +85,9 @@ const getRecordById = async (id, userId) => {
     return record;
 };
 
-const updateRecord = async (id, userId, data) => {
-    // Ensure the record exists and belongs to the user
-    await getRecordById(id, userId);
+const updateRecord = async (id, user, data) => {
+    // Ensure the record exists and user has permission
+    await getRecordById(id, user);
 
     return await prisma.financialRecord.update({
         where: { id },
@@ -88,9 +99,9 @@ const updateRecord = async (id, userId, data) => {
     });
 };
 
-const deleteRecord = async (id, userId) => {
-    // Ensure the record exists and belongs to the user
-    await getRecordById(id, userId);
+const deleteRecord = async (id, user) => {
+    // Ensure the record exists and user has permission
+    await getRecordById(id, user);
 
     return await prisma.financialRecord.update({
         where: { id },
@@ -98,14 +109,17 @@ const deleteRecord = async (id, userId) => {
     });
 };
 
-const getDeletedRecords = async (userId, filters = {}) => {
+const getDeletedRecords = async (user, filters = {}) => {
     const { page, limit } = filters;
     const where = {
         deletedAt: { not: null },
-        // Ensure Admin only sees their own deleted records if needed,
-        // or remove for global oversight. For assessment, consistency is key.
-        createdByUserId: userId, 
     };
+
+    // RBAC: Only admin can see all deleted records, others see none or just their own.
+    // For this assessment, Admin sees all, Analysts/Viewers see only their own if they have any.
+    if (user.role !== "ADMIN") {
+        where.createdByUserId = user.id;
+    }
 
     const limitNum = parseInt(limit || "10", 10);
     const pageNum = parseInt(page || "1", 10);

@@ -725,6 +725,8 @@ async function apiFetch(url, options = {}) {
 
     setLoading(true);
     try {
+        const res = await fetch(url, options);
+        
         if (res.status === 429) {
             showToast("Too many requests. Please slow down.");
             return null;

@@ -3,7 +3,7 @@ const { successResponse } = require("../utils/response");
 const asyncHandler = require("../utils/asyncHandler");
 
 const createRecord = asyncHandler(async (req, res, next) => {
-    const record = await recordService.createRecord(req.user.id, req.body);
+    const record = await recordService.createRecord(req.user, req.body);
     return successResponse(
         res,
         record,
@@ -13,7 +13,7 @@ const createRecord = asyncHandler(async (req, res, next) => {
 });
 
 const getRecords = asyncHandler(async (req, res, next) => {
-    const result = await recordService.getRecords(req.user.id, req.query);
+    const result = await recordService.getRecords(req.user, req.query);
     const { records, total, page, limit } = result;
     const totalPages = Math.ceil(total / limit);
 
@@ -37,10 +37,7 @@ const getRecords = asyncHandler(async (req, res, next) => {
 });
 
 const getRecordById = asyncHandler(async (req, res, next) => {
-    const record = await recordService.getRecordById(
-        req.params.id,
-        req.user.id,
-    );
+    const record = await recordService.getRecordById(req.params.id, req.user);
     return successResponse(
         res,
         record,
@@ -51,7 +48,7 @@ const getRecordById = asyncHandler(async (req, res, next) => {
 const updateRecord = asyncHandler(async (req, res, next) => {
     const record = await recordService.updateRecord(
         req.params.id,
-        req.user.id,
+        req.user,
         req.body,
     );
     return successResponse(
@@ -62,19 +59,12 @@ const updateRecord = asyncHandler(async (req, res, next) => {
 });
 
 const deleteRecord = asyncHandler(async (req, res, next) => {
-    await recordService.deleteRecord(req.params.id, req.user.id);
-    return successResponse(
-        res,
-        null,
-        "Financial record deleted successfully",
-    );
+    await recordService.deleteRecord(req.params.id, req.user);
+    return successResponse(res, null, "Financial record deleted successfully");
 });
 
 const getDeletedRecords = asyncHandler(async (req, res, next) => {
-    const result = await recordService.getDeletedRecords(
-        req.user.id,
-        req.query,
-    );
+    const result = await recordService.getDeletedRecords(req.user, req.query);
     const { records, total, page, limit } = result;
     const totalPages = Math.ceil(total / limit);
 

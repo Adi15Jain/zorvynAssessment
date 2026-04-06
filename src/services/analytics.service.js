@@ -1,9 +1,14 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-const getSummary = async (userId, filters = {}) => {
+const getSummary = async (user, filters = {}) => {
     const { startDate, endDate } = filters;
-    const where = { createdByUserId: userId, deletedAt: null };
+    const where = { deletedAt: null };
+
+    // RBAC: Non-admin/analyst users only see their own records
+    if (user.role !== "ADMIN" && user.role !== "ANALYST") {
+        where.createdByUserId = user.id;
+    }
     
     if (startDate || endDate) {
         where.date = {};
@@ -31,9 +36,14 @@ const getSummary = async (userId, filters = {}) => {
     return summary;
 };
 
-const getCategoryBreakdown = async (userId, filters = {}) => {
+const getCategoryBreakdown = async (user, filters = {}) => {
     const { startDate, endDate } = filters;
-    const where = { createdByUserId: userId, deletedAt: null };
+    const where = { deletedAt: null };
+
+    // RBAC: Non-admin/analyst users only see their own records
+    if (user.role !== "ADMIN" && user.role !== "ANALYST") {
+        where.createdByUserId = user.id;
+    }
     
     if (startDate || endDate) {
         where.date = {};
@@ -63,9 +73,14 @@ const getCategoryBreakdown = async (userId, filters = {}) => {
     }));
 };
 
-const getMonthlyTrends = async (userId, filters = {}) => {
+const getMonthlyTrends = async (user, filters = {}) => {
     const { startDate, endDate } = filters;
-    const where = { createdByUserId: userId, deletedAt: null };
+    const where = { deletedAt: null };
+
+    // RBAC: Non-admin/analyst users only see their own records
+    if (user.role !== "ADMIN" && user.role !== "ANALYST") {
+        where.createdByUserId = user.id;
+    }
     
     if (startDate || endDate) {
         where.date = {};
@@ -112,9 +127,16 @@ const getMonthlyTrends = async (userId, filters = {}) => {
     return Object.values(trends);
 };
 
-const getRecentRecords = async (userId, limit = 5) => {
+const getRecentRecords = async (user, limit = 5) => {
+    const where = { deletedAt: null };
+
+    // RBAC: Non-admin/analyst users only see their own records
+    if (user.role !== "ADMIN" && user.role !== "ANALYST") {
+        where.createdByUserId = user.id;
+    }
+
     return await prisma.financialRecord.findMany({
-        where: { createdByUserId: userId, deletedAt: null },
+        where,
         orderBy: { date: "desc" },
         take: parseInt(limit, 10),
     });
